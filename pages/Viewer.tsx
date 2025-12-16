@@ -84,33 +84,25 @@ const Viewer: React.FC = () => {
         console.log('[Viewer] Decoded payload:', decoded);
       }
       
-      // Validate payload structure - only check essential fields
-      // For direct mode: must have mode === "direct" AND url is a string
+      // Minimal validation: only check if direct mode has url
+      // Only show "Invalid Link" if:
+      // - p parameter is missing (already checked above)
+      // - Base64 decoding fails (already checked above - decoded is null)
+      // - JSON parsing fails (already checked above - decoded is null)
+      // - For direct mode: mode === "direct" AND url exists
+      
       if (decoded.mode === 'direct') {
-        if (typeof decoded.url !== 'string' || decoded.url.trim() === '') {
+        // For direct mode: only check that url exists (truthy)
+        if (!decoded.url) {
           if (import.meta.env.DEV) {
-            console.error('[Viewer] Direct mode payload missing or invalid URL. Decoded:', decoded);
+            console.error('[Viewer] Direct mode payload missing URL. Decoded:', decoded);
           }
           setStatus('error');
           return;
         }
-      } else if (decoded.mode === 'bio') {
-        // For bio mode: must have links array
-        if (!Array.isArray(decoded.links) || decoded.links.length === 0) {
-          if (import.meta.env.DEV) {
-            console.error('[Viewer] Bio mode payload missing or invalid links. Decoded:', decoded);
-          }
-          setStatus('error');
-          return;
-        }
-      } else {
-        // Invalid mode
-        if (import.meta.env.DEV) {
-          console.error('[Viewer] Invalid payload mode. Must be "direct" or "bio". Decoded:', decoded);
-        }
-        setStatus('error');
-        return;
       }
+      // For bio mode or other modes, we'll handle them in the render logic
+      // Don't reject them here - let the component handle it
       
       // Payload is valid - set it and handle routing
       setPayload(decoded);
