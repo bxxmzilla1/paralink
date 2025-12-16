@@ -33,7 +33,45 @@ export const shouldShowBrowserTransition = (): boolean => {
 };
 
 /**
- * Opens a URL using a dynamically created anchor element
+ * Checks if the current in-app browser is Instagram or Facebook
+ */
+const isInstagramOrFacebook = (appName: string): boolean => {
+  const normalized = appName.toLowerCase();
+  return normalized.includes('instagram') || 
+         normalized.includes('facebook') || 
+         normalized.includes('fbav') || 
+         normalized.includes('fban');
+};
+
+/**
+ * EXPERIMENTAL: Opens URL using anchor with target="_self" for iOS + Instagram/Facebook
+ * This attempts to trigger Instagram's native SafariViewController flow
+ * by using top-level navigation instead of _blank
+ */
+const openWithAnchorSelf = (url: string): void => {
+  // Create anchor element with target="_self"
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.target = '_self';
+  anchor.rel = 'noopener noreferrer';
+  
+  // Append to body (required for reliable behavior)
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  
+  // Trigger click directly (must be in user gesture handler - no delays)
+  anchor.click();
+  
+  // Clean up after a short delay
+  setTimeout(() => {
+    if (document.body.contains(anchor)) {
+      document.body.removeChild(anchor);
+    }
+  }, 100);
+};
+
+/**
+ * Opens a URL using a dynamically created anchor element with target="_blank"
  * This method reliably triggers native "You're leaving the app" dialogs
  * on both iOS and Android in-app browsers
  */
@@ -70,10 +108,17 @@ export const openInSystemBrowser = (url: string): void => {
   const env = detectEnvironment();
   
   if (env.isInAppBrowser) {
-    // ALL in-app browsers (iOS and Android): Use anchor element method
-    // This reliably triggers native dialogs and system browser transitions
-    // Works for: Instagram, Facebook, Messenger, TikTok, Threads, Snapchat, Twitter/X, etc.
-    openWithAnchorElement(url);
+    // EXPERIMENTAL: iOS + Instagram/Facebook use target="_self" for top-level navigation
+    // This attempts to trigger Instagram's native SafariViewController flow
+    if (env.os === OSType.IOS && isInstagramOrFacebook(env.appName)) {
+      openWithAnchorSelf(url);
+    } else {
+      // All other in-app browsers: Use anchor element with target="_blank"
+      // This reliably triggers native dialogs and system browser transitions
+      // Works for: Messenger, TikTok, Threads, Snapchat, Twitter/X, etc.
+      // Also used as fallback for Android Instagram/Facebook
+      openWithAnchorElement(url);
+    }
   } else if (env.os === OSType.IOS) {
     // iOS in real browser: use anchor element for consistency
     openWithAnchorElement(url);
