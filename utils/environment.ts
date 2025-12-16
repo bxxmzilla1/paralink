@@ -24,7 +24,8 @@ export interface EnvironmentInfo {
 }
 
 // Regex to detect in-app browsers from user agent
-const IN_APP_REGEX = /(TikTok|Instagram|Twitter|Snapchat|Reddit|Telegram|Facebook|FBAV|FBAN|Line|WhatsApp|LinkedIn|Twitch|musical_ly)/i;
+// Covers: Instagram, Facebook, Messenger, TikTok, Threads, Snapchat, Twitter/X, and others
+const IN_APP_REGEX = /(TikTok|Instagram|Twitter|Snapchat|Reddit|Telegram|Facebook|FBAV|FBAN|Messenger|Threads|Line|WhatsApp|LinkedIn|Twitch|musical_ly)/i;
 
 /**
  * Detects the current environment (OS, browser type, in-app status)

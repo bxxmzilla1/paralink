@@ -33,55 +33,52 @@ export const shouldShowBrowserTransition = (): boolean => {
 };
 
 /**
+ * Opens a URL using a dynamically created anchor element
+ * This method reliably triggers native "You're leaving the app" dialogs
+ * on both iOS and Android in-app browsers
+ */
+const openWithAnchorElement = (url: string): void => {
+  // Create anchor element
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener noreferrer';
+  
+  // Append to body (required for reliable behavior)
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  
+  // Trigger click (must be in user gesture handler - no delays)
+  anchor.click();
+  
+  // Clean up after a short delay
+  setTimeout(() => {
+    if (document.body.contains(anchor)) {
+      document.body.removeChild(anchor);
+    }
+  }, 100);
+};
+
+/**
  * Attempts to open a URL in the system browser
  * This function should only be called after user interaction (button tap)
+ * 
+ * For in-app browsers: Uses anchor element method to reliably trigger
+ * native "You're leaving the app" dialogs on both iOS and Android
  */
 export const openInSystemBrowser = (url: string): void => {
   const env = detectEnvironment();
   
-  if (env.os === OSType.ANDROID && env.isInAppBrowser) {
-    // Android: Use intent to open in Chrome
-    const intent = generateAndroidIntent(url);
-    window.location.href = intent;
-    
-    // Fallback after delay
-    setTimeout(() => {
-      window.open(url, '_blank');
-    }, 2500);
-  } else if (env.os === OSType.IOS && env.isInAppBrowser) {
-    // iOS + in-app browser: Use dynamically created anchor element
-    // This is the most reliable method on iOS and allows native dialogs to appear
-    // Create anchor element
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.target = '_blank';
-    anchor.rel = 'noopener noreferrer';
-    
-    // Append to body (required for iOS)
-    anchor.style.display = 'none';
-    document.body.appendChild(anchor);
-    
-    // Trigger click (must be in user gesture handler)
-    anchor.click();
-    
-    // Clean up after a short delay
-    setTimeout(() => {
-      document.body.removeChild(anchor);
-    }, 100);
+  if (env.isInAppBrowser) {
+    // ALL in-app browsers (iOS and Android): Use anchor element method
+    // This reliably triggers native dialogs and system browser transitions
+    // Works for: Instagram, Facebook, Messenger, TikTok, Threads, Snapchat, Twitter/X, etc.
+    openWithAnchorElement(url);
   } else if (env.os === OSType.IOS) {
     // iOS in real browser: use anchor element for consistency
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.target = '_blank';
-    anchor.rel = 'noopener noreferrer';
-    anchor.style.display = 'none';
-    document.body.appendChild(anchor);
-    anchor.click();
-    setTimeout(() => {
-      document.body.removeChild(anchor);
-    }, 100);
+    openWithAnchorElement(url);
   } else {
-    // Desktop or other: standard open
+    // Desktop or other real browsers: standard open
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 };
