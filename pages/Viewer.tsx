@@ -27,14 +27,15 @@ const Viewer: React.FC = () => {
   useEffect(() => {
     try {
       // Extract payload from hash: #/go?p=...
-      const hash = location.hash;
+      // Use window.location.hash directly to get the actual browser hash
+      const hash = window.location.hash;
       
       if (import.meta.env.DEV) {
         console.log('[Viewer] Parsing hash:', hash);
       }
       
       // Check if hash contains the payload parameter
-      if (!hash.includes('?p=')) {
+      if (!hash || !hash.includes('?p=')) {
         // No payload parameter found
         if (import.meta.env.DEV) {
           console.error('[Viewer] Hash does not contain ?p= parameter. Hash:', hash);
@@ -45,6 +46,14 @@ const Viewer: React.FC = () => {
       
       // Extract query string from hash (everything after the ?)
       const queryIndex = hash.indexOf('?');
+      if (queryIndex === -1) {
+        if (import.meta.env.DEV) {
+          console.error('[Viewer] No query string found in hash. Hash:', hash);
+        }
+        setStatus('error');
+        return;
+      }
+      
       const queryString = hash.substring(queryIndex + 1);
       
       if (import.meta.env.DEV) {
@@ -68,7 +77,8 @@ const Viewer: React.FC = () => {
         console.log('[Viewer] Encoded payload length:', encoded.length);
       }
       
-      // Decode the payload
+      // Decode the payload using: decodeURIComponent → atob → JSON.parse
+      // The decodePayload function handles this, but we ensure URL decoding happens
       const decoded = decodePayload(encoded);
       
       if (!decoded) {

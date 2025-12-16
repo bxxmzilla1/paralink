@@ -33,32 +33,28 @@ export const encodePayload = (data: LinkPayload): string => {
 
 /**
  * Decodes a base64 string back to a LinkPayload
- * Handles URL-encoded base64 strings (decodeURIComponent + atob)
- * URLSearchParams.get() may already decode the value, but we handle both cases
+ * Decoding order: decodeURIComponent → atob → JSON.parse
  */
 export const decodePayload = (base64: string): LinkPayload | null => {
   if (!base64 || typeof base64 !== 'string') {
     return null;
   }
   
-  // Try decoding directly first (URLSearchParams may have already decoded it)
   try {
-    const json = atob(base64);
+    // Step 1: URL decode (decodeURIComponent)
+    const urlDecoded = decodeURIComponent(base64);
+    
+    // Step 2: Base64 decode (atob)
+    const json = atob(urlDecoded);
+    
+    // Step 3: JSON parse
     return JSON.parse(json);
-  } catch (e1) {
-    // If that fails, try URL-decoding first (in case it's still URL-encoded)
-    try {
-      const urlDecoded = decodeURIComponent(base64);
-      const json = atob(urlDecoded);
-      return JSON.parse(json);
-    } catch (e2) {
-      // Both attempts failed
-      // Only log in development
-      if (import.meta.env?.DEV) {
-        console.error('Decoding failed. Direct attempt:', e1, 'URL-decoded attempt:', e2);
-      }
-      return null;
+  } catch (e) {
+    // Decoding failed - only log in development
+    if (import.meta.env?.DEV) {
+      console.error('Decoding failed:', e);
     }
+    return null;
   }
 };
 
