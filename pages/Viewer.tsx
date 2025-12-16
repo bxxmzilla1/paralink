@@ -129,14 +129,22 @@ const Viewer: React.FC = () => {
           console.log('[Viewer] Direct link. Needs transition:', needsTransition, 'URL:', decoded.url);
         }
         
+        // CRITICAL: Always check for in-app browser FIRST
+        // NEVER redirect immediately if in an in-app browser
         if (needsTransition) {
-          // In-app browser: show transition confirmation
+          // In-app browser: ALWAYS show transition confirmation
+          // DO NOT redirect - wait for user to tap "Continue 18+"
           setBridgeTargetUrl(decoded.url);
           setShowBridge(true);
-        } else {
-          // Real browser: redirect immediately
-          redirectImmediately(decoded.url);
+          // Explicitly return to prevent any redirect logic
+          return;
         }
+        
+        // Only redirect if we're in a real browser
+        // Use setTimeout to ensure React state updates complete first
+        setTimeout(() => {
+          redirectImmediately(decoded.url);
+        }, 0);
       }
     } catch (error) {
       // Only log in development
@@ -201,7 +209,9 @@ const Viewer: React.FC = () => {
     );
   }
 
-  // Show browser transition confirmation when needed
+  // PRIORITY: Show browser transition confirmation FIRST if needed
+  // This must be checked before any redirect or fallback logic
+  // For in-app browsers, ALWAYS show bridge - never redirect immediately
   if (showBridge && bridgeTargetUrl) {
     return (
       <BrowserBridge onOpen={handleBridgeConfirm} />
