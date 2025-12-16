@@ -33,9 +33,9 @@ export const shouldShowBrowserTransition = (): boolean => {
 };
 
 /**
- * Checks if the current in-app browser is Instagram or Facebook (including Messenger/Threads)
+ * Checks if the current in-app browser is a Meta app (Instagram, Facebook, Messenger, Threads)
  */
-const isInstagramOrFacebook = (appName: string): boolean => {
+const isMetaApp = (appName: string): boolean => {
   const normalized = appName.toLowerCase();
   return normalized === 'instagram' || 
          normalized === 'facebook' || 
@@ -48,13 +48,15 @@ const isInstagramOrFacebook = (appName: string): boolean => {
 /**
  * Attempts to open a URL in the system browser
  * This function should only be called after user interaction (button tap)
+ * 
+ * STABILITY: Platform-specific behavior - do not unify or experiment
  */
 export const openInSystemBrowser = (url: string): void => {
   const env = detectEnvironment();
   
+  // ANDROID: Intent-based navigation for ALL in-app browsers
+  // CRITICAL: Must use intent:// to force Chrome, never rely on anchor-only
   if (env.os === OSType.ANDROID && env.isInAppBrowser) {
-    // Android: Use intent to open in Chrome
-    // DO NOT MODIFY - Android behavior must remain unchanged
     const intent = generateAndroidIntent(url);
     window.location.href = intent;
     
@@ -62,13 +64,15 @@ export const openInSystemBrowser = (url: string): void => {
     setTimeout(() => {
       window.open(url, '_blank');
     }, 2500);
-  } else if (env.os === OSType.IOS && env.isInAppBrowser && isInstagramOrFacebook(env.appName)) {
-    // iOS + Instagram/Facebook: Use dynamically created anchor with target="_self"
-    // This allows Instagram/Facebook to control navigation and show native "You're leaving" dialog
-    // Preferred path: target="_self" for top-level navigation
+    return;
+  }
+  
+  // iOS: Anchor-based navigation only (no window.location.href, no window.open for in-app)
+  if (env.os === OSType.IOS && env.isInAppBrowser) {
+    // Create anchor element dynamically
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.target = '_self'; // Preferred: allows IG/FB to control navigation
+    anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
     anchor.style.display = 'none';
     
@@ -84,32 +88,15 @@ export const openInSystemBrowser = (url: string): void => {
         document.body.removeChild(anchor);
       }
     }, 100);
-  } else if (env.os === OSType.IOS && env.isInAppBrowser) {
-    // iOS + other in-app browsers: Use dynamically created anchor with target="_blank"
-    // Fallback behavior for non-IG/FB in-app browsers
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.target = '_blank';
-    anchor.rel = 'noopener noreferrer';
-    anchor.style.display = 'none';
-    
-    // Append to body temporarily
-    document.body.appendChild(anchor);
-    
-    // Trigger click (must be inside user gesture handler)
-    anchor.click();
-    
-    // Clean up after a short delay
-    setTimeout(() => {
-      if (document.body.contains(anchor)) {
-        document.body.removeChild(anchor);
-      }
-    }, 100);
-  } else if (env.os === OSType.IOS) {
-    // iOS in real browser: standard open
+    return;
+  }
+  
+  // Real browsers: standard window.open
+  if (env.os === OSType.IOS) {
+    // iOS in real browser
     window.open(url, '_blank', 'noopener,noreferrer');
   } else {
-    // Desktop or other: standard open
+    // Desktop or other
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 };
