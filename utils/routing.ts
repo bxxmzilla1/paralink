@@ -48,12 +48,16 @@ export const openInSystemBrowser = (url: string): void => {
     setTimeout(() => {
       window.open(url, '_blank');
     }, 2500);
+  } else if (env.os === OSType.IOS && env.isInAppBrowser) {
+    // iOS + in-app browser: Use window.open with _blank
+    // Do NOT use window.location.href for iOS in-app browsers
+    window.open(url, '_blank', 'noopener,noreferrer');
   } else if (env.os === OSType.IOS) {
-    // iOS: Use _system target (requires user interaction)
-    window.open(url, '_system');
+    // iOS in real browser: standard open
+    window.open(url, '_blank', 'noopener,noreferrer');
   } else {
     // Desktop or other: standard open
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 };
 
