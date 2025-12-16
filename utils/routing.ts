@@ -49,12 +49,37 @@ export const openInSystemBrowser = (url: string): void => {
       window.open(url, '_blank');
     }, 2500);
   } else if (env.os === OSType.IOS && env.isInAppBrowser) {
-    // iOS + in-app browser: Use window.open with _blank
-    // Do NOT use window.location.href for iOS in-app browsers
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // iOS + in-app browser: Use dynamically created anchor element
+    // This is the most reliable method on iOS and allows native dialogs to appear
+    // Create anchor element
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    
+    // Append to body (required for iOS)
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    
+    // Trigger click (must be in user gesture handler)
+    anchor.click();
+    
+    // Clean up after a short delay
+    setTimeout(() => {
+      document.body.removeChild(anchor);
+    }, 100);
   } else if (env.os === OSType.IOS) {
-    // iOS in real browser: standard open
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // iOS in real browser: use anchor element for consistency
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    setTimeout(() => {
+      document.body.removeChild(anchor);
+    }, 100);
   } else {
     // Desktop or other: standard open
     window.open(url, '_blank', 'noopener,noreferrer');
