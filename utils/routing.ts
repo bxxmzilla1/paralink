@@ -33,30 +33,14 @@ export const shouldShowBrowserTransition = (): boolean => {
 };
 
 /**
- * Checks if the current in-app browser is a Meta app (Instagram, Facebook, Messenger, Threads)
- */
-const isMetaApp = (appName: string): boolean => {
-  const normalized = appName.toLowerCase();
-  return normalized === 'instagram' || 
-         normalized === 'facebook' || 
-         normalized === 'fbav' || 
-         normalized === 'fban' ||
-         normalized.includes('messenger') ||
-         normalized.includes('threads');
-};
-
-/**
  * Attempts to open a URL in the system browser
  * This function should only be called after user interaction (button tap)
- * 
- * STABILITY: Platform-specific behavior - do not unify or experiment
  */
 export const openInSystemBrowser = (url: string): void => {
   const env = detectEnvironment();
   
-  // ANDROID: Intent-based navigation for ALL in-app browsers
-  // CRITICAL: Must use intent:// to force Chrome, never rely on anchor-only
   if (env.os === OSType.ANDROID && env.isInAppBrowser) {
+    // Android: Use intent to open in Chrome
     const intent = generateAndroidIntent(url);
     window.location.href = intent;
     
@@ -64,12 +48,10 @@ export const openInSystemBrowser = (url: string): void => {
     setTimeout(() => {
       window.open(url, '_blank');
     }, 2500);
-    return;
-  }
-  
-  // iOS: Anchor-based navigation only (no window.location.href, no window.open for in-app)
-  if (env.os === OSType.IOS && env.isInAppBrowser) {
-    // Create anchor element dynamically
+  } else if (env.os === OSType.IOS && env.isInAppBrowser) {
+    // iOS + in-app browser: Use dynamically created anchor element
+    // This allows Instagram's native "You're leaving our app" dialog to appear naturally
+    // and ensures iOS users reach SafariViewController reliably
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.target = '_blank';
@@ -79,24 +61,18 @@ export const openInSystemBrowser = (url: string): void => {
     // Append to body temporarily
     document.body.appendChild(anchor);
     
-    // Trigger click directly inside user gesture handler (no delays)
+    // Trigger click (must be in user gesture context)
     anchor.click();
     
     // Clean up after a short delay
     setTimeout(() => {
-      if (document.body.contains(anchor)) {
-        document.body.removeChild(anchor);
-      }
+      document.body.removeChild(anchor);
     }, 100);
-    return;
-  }
-  
-  // Real browsers: standard window.open
-  if (env.os === OSType.IOS) {
-    // iOS in real browser
+  } else if (env.os === OSType.IOS) {
+    // iOS in real browser: standard open
     window.open(url, '_blank', 'noopener,noreferrer');
   } else {
-    // Desktop or other
+    // Desktop or other: standard open
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 };
